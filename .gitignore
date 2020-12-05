@@ -16,6 +16,9 @@
 #Visual Studio Code options directory
 .vscode/
 
+# CLion
+.idea/
+
 # Installshield build directories
 /win_build/installerv2/BOINC
 /win_build/installerv2/BOINC_vbox
@@ -217,3 +220,6 @@ vda/vdad
 
 # OS-specific files
 .DS_Store
+
+# gtest files
+/tests/gtest
