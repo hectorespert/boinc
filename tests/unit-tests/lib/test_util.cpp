@@ -54,11 +54,11 @@ namespace test_util {
     };
 
     TEST_F(test_util, dtime) {
-        EXPECT_TRUE(dtime() > 0)
+        EXPECT_TRUE(dtime() > 0);
     }
 
     TEST_F(test_util, dday) {
-        EXPECT_TRUE(dday() > 0)
+        EXPECT_TRUE(dday() > 0);
     }
 
     TEST_F(test_util, boinc_sleep) {
@@ -66,10 +66,30 @@ namespace test_util {
         SUCCEED();
     }
 
+    TEST_F(test_util, push_unique) {
+        vector<string> strings;
+        push_unique("a", strings);
+        EXPECT_EQ(strings.size(), (long unsigned int) 1);
+
+        push_unique("b", strings);
+        EXPECT_EQ(strings.size(), (long unsigned int) 2);
+
+        push_unique("b", strings);
+        EXPECT_EQ(strings.size(), (long unsigned int) 2);
+    }
+
+    TEST_F(test_util, drand) {
+        EXPECT_TRUE(drand() > 0);
+    }
+
     TEST_F(test_util, rand_normal) {
         rand_normal();
         rand_normal();
         SUCCEED();
+    }
+
+    TEST_F(test_util, linux_cpu_time) {
+        EXPECT_TRUE(linux_cpu_time(1) > 0);
     }
 
 } // namespace
