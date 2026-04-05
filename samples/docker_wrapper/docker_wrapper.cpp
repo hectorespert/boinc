@@ -198,6 +198,8 @@ struct CONFIG {
         // -v args in create container
     vector<string> portmaps;
         // -p args in create container
+    vector<string> env_vars;
+        // host environment variable names whose values are passed to the container
     void print() {
         fprintf(stderr, "docker_wrapper config:\n");
         if (!workdir.empty()) {
@@ -217,6 +219,9 @@ struct CONFIG {
         }
         for (string& s: portmaps) {
             fprintf(stderr, "   portmap: %s\n", s.c_str());
+        }
+        for (string& s: env_vars) {
+            fprintf(stderr, "   env var: %s\n", s.c_str());
         }
         if (!build_args.empty()) {
             fprintf(stderr, "   build args: %s\n", build_args.c_str());
@@ -314,6 +319,14 @@ int parse_config_file() {
     x = v.find("verbose");
     if (x) {
         config.verbose = x->as<int>();
+    }
+    x = v.find("env_vars");
+    if (x) {
+        const toml::Array& ar = x->as<toml::Array>();
+        for (const toml::Value& val: ar) {
+            string s = val.as<string>();
+            config.env_vars.push_back(s);
+        }
     }
     return 0;
 }
@@ -549,6 +562,15 @@ int create_container() {
     for (string s: config.portmaps) {
         snprintf(buf, sizeof(buf), " -p %s", s.c_str());
         strcat(cmd, buf);
+    }
+
+    // pass host environment variables to container
+    //
+    for (string var_name: config.env_vars) {
+        if (getenv(var_name.c_str())) {
+            snprintf(buf, sizeof(buf), " -e %s", var_name.c_str());
+            strcat(cmd, buf);
+        }
     }
 
     // multithread
