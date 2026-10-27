@@ -492,6 +492,41 @@ static void set_client_priority() {
 // initialize the client, and print messages about
 // the host HW/SW and the configuration.
 //
+#ifdef __linux__
+// Heuristic: detect if running inside a container (Docker, Podman, k8s)
+// and whether the PID namespace appears isolated from the host.
+static bool in_container() {
+    if (boinc_file_exists("/.dockerenv")) return true;
+    if (boinc_file_exists("/run/.containerenv")) return true;
+    FILE* f = fopen("/proc/1/cgroup", "r");
+    if (!f) return false;
+    char line[512];
+    bool found = false;
+    while (fgets(line, sizeof(line), f)) {
+        if (strstr(line, "docker") || strstr(line, "kubepods")
+            || strstr(line, "containerd") || strstr(line, "libpod")
+        ) {
+            found = true;
+            break;
+        }
+    }
+    fclose(f);
+    return found;
+}
+
+// In a container with its own PID namespace, PID 1 is the container's
+// entrypoint (often the client itself), not the host init.
+static bool pid_namespace_isolated() {
+    if (getpid() == 1) return true;
+    FILE* f = fopen("/proc/1/comm", "r");
+    if (!f) return false;
+    char comm[64] = "";
+    if (!fgets(comm, sizeof(comm), f)) comm[0] = 0;
+    fclose(f);
+    return !(strstr(comm, "systemd") || strstr(comm, "init"));
+}
+#endif
+
 int CLIENT_STATE::init() {
     int retval;
     unsigned int i;
@@ -545,6 +580,17 @@ int CLIENT_STATE::init() {
 
     relative_to_absolute("", buf);
     msg_printf(NULL, MSG_INFO, "Data directory: %s", buf);
+
+#ifdef __linux__
+    if (in_container() && pid_namespace_isolated()) {
+        msg_printf(NULL, MSG_USER_ALERT,
+            "Running in a container with an isolated PID namespace; "
+            "user activity and other processes can't be detected. "
+            "Use --pid=host (Docker/Podman), pid: host (Compose) "
+            "or hostPID: true (Kubernetes)."
+        );
+    }
+#endif
 
 #ifdef _WIN32
     DWORD  buf_size = sizeof(buf);
