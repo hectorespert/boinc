@@ -734,6 +734,44 @@ static void parse_cpuinfo_linux(HOST_INFO& host) {
     safe_strcpy(host.p_model, model_buf);
     fclose(f);
 }
+
+// Read a field of the SMBIOS/DMI system info exported by the kernel.
+// Return false if it's missing or one of the placeholders
+// that unfilled firmware fields ship with.
+//
+static bool read_dmi_field(const char* name, char* buf, int len) {
+    static const char* placeholders[] = {
+        "Default string", "System manufacturer", "System Product Name",
+        "To Be Filled By O.E.M.", "To be filled by O.E.M.", "Not Applicable",
+    };
+    char path[256];
+    snprintf(path, sizeof(path), "/sys/class/dmi/id/%s", name);
+    FILE* f = fopen(path, "r");
+    if (!f) return false;
+    bool found = fgets(buf, len, f) != NULL;
+    fclose(f);
+    if (!found) return false;
+    strip_whitespace(buf);
+    if (!strlen(buf)) return false;
+    for (const char* p : placeholders) {
+        if (!strcmp(buf, p)) return false;
+    }
+    return true;
+}
+
+// PCs (and ACPI ARM machines) describe themselves in DMI;
+// use "<sys_vendor> <product_name>" as product name,
+// e.g. "Micro-Star International Co., Ltd. MS-7C37".
+//
+static void get_dmi_product_name(HOST_INFO& host) {
+    char vendor[256], product[256];
+    if (strlen(host.product_name)) return;
+    if (!read_dmi_field("sys_vendor", vendor, sizeof(vendor))) return;
+    if (!read_dmi_field("product_name", product, sizeof(product))) return;
+    safe_strcpy(host.product_name, vendor);
+    safe_strcat(host.product_name, " ");
+    safe_strcat(host.product_name, product);
+}
 #endif  // LINUX_LIKE_SYSTEM
 #ifdef __FreeBSD__
 #if defined(__i386__) || defined(__amd64__)
@@ -1576,6 +1614,7 @@ bool HOST_INFO::get_docker_compose_version(){
 int HOST_INFO::get_cpu_info() {
 #if LINUX_LIKE_SYSTEM
     parse_cpuinfo_linux(*this);
+    get_dmi_product_name(*this);
 #elif defined( __APPLE__)
     get_cpu_info_mac(*this);
 #elif defined(__EMX__)
