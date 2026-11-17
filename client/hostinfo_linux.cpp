@@ -26,6 +26,7 @@
 #else
 #include "config.h"
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -211,6 +212,48 @@ bool HOST_INFO::parse_linux_os_info(
         strlcpy(os_name, dist_name, os_name_size);
     }
     return true;
+}
+
+// ARM cores by the MIDR fields of /proc/cpuinfo
+// ("CPU implementer" and "CPU part").
+// Only cores seen on hosts that report no "model name";
+// 32-bit kernels give one.
+//
+struct ARM_CPU_PART {
+    unsigned long implementer;
+    unsigned long part;
+    const char* name;
+};
+
+static const ARM_CPU_PART arm_cpu_parts[] = {
+    {0x41, 0xd03, "Cortex-A53"},
+    {0x41, 0xd05, "Cortex-A55"},
+    {0x41, 0xd07, "Cortex-A57"},
+    {0x41, 0xd08, "Cortex-A72"},
+    {0x41, 0xd0b, "Cortex-A76"},
+    {0x41, 0xd0c, "Neoverse-N1"},
+    {0x41, 0xd42, "Cortex-A78AE"},
+    {0x41, 0xd80, "Cortex-A520"},
+    {0x41, 0xd81, "Cortex-A720"},
+    {0x41, 0xd87, "Cortex-A725"},
+};
+
+// return the core name, or NULL if unknown
+//
+const char* HOST_INFO::arm_cpu_part_name(
+    const char* implementer, const char* part
+) {
+    if (!implementer || !part) return NULL;
+    char *end1, *end2;
+    unsigned long impl = strtoul(implementer, &end1, 16);
+    unsigned long p = strtoul(part, &end2, 16);
+    if (end1 == implementer || *end1 || end2 == part || *end2) return NULL;
+    for (const ARM_CPU_PART& cp : arm_cpu_parts) {
+        if (cp.implementer == impl && cp.part == p) {
+            return cp.name;
+        }
+    }
+    return NULL;
 }
 
 int is_filesystem_remote(const char* path, bool &result) {

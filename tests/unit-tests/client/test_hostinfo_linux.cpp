@@ -72,4 +72,23 @@ namespace test_hostinfo_linux {
         EXPECT_STREQ("OpenWrt", os_name);
         EXPECT_STREQ("OpenWrt 25.12.4", os_version);
     }
+
+    TEST_F(test_hostinfo_linux, arm_cpu_part_name_known) {
+        EXPECT_STREQ("Cortex-A53", HOST_INFO::arm_cpu_part_name("0x41", "0xd03"));
+        EXPECT_STREQ("Cortex-A72", HOST_INFO::arm_cpu_part_name("0x41", "0xd08"));
+        EXPECT_STREQ("Neoverse-N1", HOST_INFO::arm_cpu_part_name("0x41", "0xd0c"));
+    }
+
+    TEST_F(test_hostinfo_linux, arm_cpu_part_name_unknown) {
+        EXPECT_EQ(nullptr, HOST_INFO::arm_cpu_part_name("0x41", "0xfff"));
+        EXPECT_EQ(nullptr, HOST_INFO::arm_cpu_part_name("0x51", "0xd03"));
+    }
+
+    TEST_F(test_hostinfo_linux, arm_cpu_part_name_invalid) {
+        EXPECT_EQ(nullptr, HOST_INFO::arm_cpu_part_name("", "0xd03"));
+        EXPECT_EQ(nullptr, HOST_INFO::arm_cpu_part_name("0x41", ""));
+        EXPECT_EQ(nullptr, HOST_INFO::arm_cpu_part_name("0x41", "0xd03 x"));
+        EXPECT_EQ(nullptr, HOST_INFO::arm_cpu_part_name(nullptr, "0xd03"));
+        EXPECT_EQ(nullptr, HOST_INFO::arm_cpu_part_name("0x41", nullptr));
+    }
 }
