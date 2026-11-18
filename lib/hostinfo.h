@@ -180,6 +180,9 @@ public:
         char* os_name, const int os_name_size, char* os_version,
         const int os_version_size
     );
+    static const char* arm_cpu_part_name(
+        const char* implementer, const char* part
+    );
     static bool get_docker_version_string(
         DOCKER_TYPE type, const char* raw, std::string& version
     );

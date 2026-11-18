@@ -702,6 +702,16 @@ static void parse_cpuinfo_linux(HOST_INFO& host) {
         safe_strcat(model_buf, "]");
     }
 #else
+    // arm64 kernels give no "model name", only the MIDR fields;
+    // name the core from them.
+    // With mixed cores (big.LITTLE) this is the first CPU's.
+    //
+    if (!model_found) {
+        const char* name = HOST_INFO::arm_cpu_part_name(implementer, cpu_part);
+        if (name) {
+            safe_strcpy(model_buf, name);
+        }
+    }
     if (model_info_found) {
         safe_strcat(model_buf, " [");
         if (strlen(implementer)>0) {
